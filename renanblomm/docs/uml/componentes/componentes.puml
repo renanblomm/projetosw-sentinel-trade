@@ -1,0 +1,88 @@
+@startuml componentes
+title SentinelTrade — Diagrama de Componentes (com notação UMLsec)
+skinparam componentStyle uml2
+
+actor "Navegador\n(Investidor / Analista / Auditor)" as USER
+
+package "Camada de Apresentação" {
+  [Interface Web\n(HTML/JS)] as UI
+}
+
+package "BFF — Backend for Frontend <<secure>>" {
+  [BFF] as BFF <<leastPrivilege>>
+  interface "IApiBff\n/api/*" as IAPI
+}
+
+package "Core — Serviços de Domínio <<critical>>" {
+  interface "ICore\n(API interna 127.0.0.1)" as ICORE
+  [Autenticação + MFA] as AUTH <<secureAuthentication>>
+  [Ordens\n(ciclo de vida, idempotência)] as ORD <<integrity>>
+  [Risco Pré-Trade] as RISK <<integrity>>
+  [Contas e Custódia] as ACC
+  [Notificação] as NOTIF
+  [Auditoria\n(hash encadeado)] as AUDIT <<audit>>
+}
+
+package "Integrações <<availability>>" {
+  [Gateway da Bolsa\n(timeout + retry + circuit breaker)] as GW
+  [Ingestão de Cotações\n(isolada - RT2)] as ING
+}
+
+package "Persistência" {
+  [Repositórios\n(SQL parametrizado)] as REPO
+  database "SQLite\nsentineltrade.db" as DB
+}
+
+package "Sistemas Externos Simulados" {
+  [Bolsa Simulada] as BOLSA
+  interface "IBolsa\n/ordens /mercado" as IBOLSA
+  [Provedor de Cotações] as PROV
+  interface "ICotacoes\n/cotacoes" as ICOT
+}
+
+USER --> UI
+UI --> IAPI : HTTPS <<secrecy>>
+IAPI - BFF
+BFF --> ICORE : HTTP interno
+ICORE - AUTH
+ICORE - ORD
+ICORE - ACC
+ICORE - AUDIT
+ORD --> RISK
+ORD --> ACC
+ORD --> NOTIF
+ORD --> AUDIT
+AUTH --> AUDIT
+ORD --> GW
+RISK ..> ING : última cotação
+GW --> IBOLSA
+IBOLSA - BOLSA
+BOLSA ..> ICORE : callback\n/bolsa/eventos
+ING --> ICOT
+ICOT - PROV
+AUTH --> REPO
+ORD --> REPO
+ACC --> REPO
+AUDIT --> REPO
+NOTIF --> REPO
+REPO --> DB
+
+note right of BFF
+  <<leastPrivilege>> sessão só existe após MFA;
+  perfil checado a cada requisição; usuário vem
+  da sessão (nunca do cliente); allowlist de
+  arquivos estáticos; CSP e nosniff; limite de 16 KB.
+end note
+
+note right of AUDIT
+  <<audit>> registro com timestamp UTC (ms), usuário,
+  evento e hash SHA-256 do anterior. Triggers no banco
+  bloqueiam UPDATE e DELETE.
+end note
+
+note bottom of GW
+  <<availability>> dados vindos da bolsa e do provedor
+  são revalidados (não confiáveis). Bolsa fora do ar:
+  ordem REJEITADA e reserva devolvida.
+end note
+@enduml

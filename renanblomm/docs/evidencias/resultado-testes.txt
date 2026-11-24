@@ -1,0 +1,24 @@
+test_ct10_banco_bloqueia_alteracao_da_trilha (test_sentineltrade.TestAuditoria.test_ct10_banco_bloqueia_alteracao_da_trilha) ... ok
+test_ct10_ca4_log_utc_ms_e_integridade (test_sentineltrade.TestAuditoria.test_ct10_ca4_log_utc_ms_e_integridade) ... ok
+test_ct1_login_exige_senha_e_mfa (test_sentineltrade.TestAutenticacao.test_ct1_login_exige_senha_e_mfa) ... ok
+test_ct11_ca2_idempotencia (test_sentineltrade.TestOrdens.test_ct11_ca2_idempotencia) ... ok
+test_ct12_rnf1_risco_abaixo_de_50ms (test_sentineltrade.TestOrdens.test_ct12_rnf1_risco_abaixo_de_50ms) ... ok
+test_ct13_bolsa_fora_do_ar_nao_corrompe_carteira (test_sentineltrade.TestOrdens.test_ct13_bolsa_fora_do_ar_nao_corrompe_carteira) ... ok
+test_ct14_validacao_de_entrada (test_sentineltrade.TestOrdens.test_ct14_validacao_de_entrada) ... ok
+test_ct2_consulta_carteira (test_sentineltrade.TestOrdens.test_ct2_consulta_carteira) ... ok
+test_ct4_ct7_compra_validada_enviada_e_executada (test_sentineltrade.TestOrdens.test_ct4_ct7_compra_validada_enviada_e_executada) ... ok
+test_ct5_cancelamento_libera_saldo (test_sentineltrade.TestOrdens.test_ct5_cancelamento_libera_saldo) ... ok
+test_ct5_rn4_ordem_executada_nao_cancela (test_sentineltrade.TestOrdens.test_ct5_rn4_ordem_executada_nao_cancela) ... ok
+test_ct6_ca3_saldo_insuficiente_nao_chega_na_bolsa (test_sentineltrade.TestOrdens.test_ct6_ca3_saldo_insuficiente_nao_chega_na_bolsa) ... ok
+test_ct6_rn2_venda_sem_custodia (test_sentineltrade.TestOrdens.test_ct6_rn2_venda_sem_custodia) ... ok
+test_ct6_rn3_mercado_fechado (test_sentineltrade.TestOrdens.test_ct6_rn3_mercado_fechado) ... ok
+test_ct6_rn5_limite_diario (test_sentineltrade.TestOrdens.test_ct6_rn5_limite_diario) ... ok
+test_ct8_transicao_invalida_bloqueada (test_sentineltrade.TestOrdens.test_ct8_transicao_invalida_bloqueada) ... ok
+test_ct9_notificacoes (test_sentineltrade.TestOrdens.test_ct9_notificacoes) ... ok
+test_ct13_circuit_breaker_abre (test_sentineltrade.TestResiliencia.test_ct13_circuit_breaker_abre) ... Circuit breaker "teste" ABERTO
+ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 0.082s
+
+OK

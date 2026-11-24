@@ -1,0 +1,92 @@
+@startuml casos-de-uso
+title SentinelTrade — Diagrama de Casos de Uso (com estereótipos UMLsec)
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "Investidor" as INV
+actor "Analista de Risco" as ANA
+actor "Auditor" as AUD
+actor "Administrador" as ADM
+actor "Bolsa/Corretora\nSimulada" as BOLSA <<Sistema Externo>>
+actor "Provedor de\nCotações" as PROV <<Sistema Externo>>
+actor "Serviço de\nNotificação" as NOT <<Serviço>>
+actor "Serviço de\nAuditoria" as SAUD <<Serviço>>
+
+rectangle "Sistema SentinelTrade <<secure>>" {
+  usecase "UC01 Autenticar-se com MFA\n<<secureAuthentication>>" as UC01
+  usecase "UC02 Consultar carteira" as UC02
+  usecase "UC03 Consultar saldo" as UC03
+  usecase "UC04 Consultar cotação" as UC04
+  usecase "UC05 Enviar ordem de compra\n<<integrity>>" as UC05
+  usecase "UC06 Enviar ordem de venda\n<<integrity>>" as UC06
+  usecase "UC07 Validar ordem\n(risco pré-trade)" as UC07
+  usecase "UC07a Verificar saldo\nou posição" as UC07A
+  usecase "UC08 Transmitir ordem\nà corretora" as UC08
+  usecase "UC09 Cancelar ordem" as UC09
+  usecase "UC10 Consultar status\nda ordem" as UC10
+  usecase "UC11 Consultar histórico\nde operações" as UC11
+  usecase "UC12 Gerenciar ativos\n<<leastPrivilege>>" as UC12
+  usecase "UC13 Gerenciar limites\nde risco <<leastPrivilege>>" as UC13
+  usecase "UC14 Registrar auditoria\n<<audit>>" as UC14
+  usecase "UC15 Enviar notificação" as UC15
+  usecase "UC16 Consultar trilha\nde auditoria" as UC16
+  usecase "UC17 Atualizar ciclo\nde vida da ordem" as UC17
+}
+
+INV --> UC01
+INV --> UC02
+INV --> UC03
+INV --> UC04
+INV --> UC05
+INV --> UC06
+INV --> UC09
+INV --> UC10
+INV --> UC11
+
+ANA --> UC01
+ANA --> UC13
+ANA --> UC16
+AUD --> UC01
+AUD --> UC16
+ADM --> UC01
+ADM --> UC12
+
+UC05 ..> UC07 : <<include>>
+UC06 ..> UC07 : <<include>>
+UC07 ..> UC07A : <<include>>
+UC05 ..> UC08 : <<include>>
+UC06 ..> UC08 : <<include>>
+UC09 ..> UC08 : <<include>>
+UC05 ..> UC14 : <<include>>
+UC06 ..> UC14 : <<include>>
+UC09 ..> UC14 : <<include>>
+UC13 ..> UC14 : <<include>>
+UC17 ..> UC14 : <<include>>
+UC17 ..> UC15 : <<include>>
+UC09 ..> UC15 : <<include>>
+
+UC08 --> BOLSA
+BOLSA --> UC17
+PROV --> UC04
+UC15 --> NOT
+UC14 --> SAUD
+
+note right of UC07
+  <<integrity>> Valida ativo (allowlist), quantidade,
+  preço, mercado aberto, saldo/custódia e limite
+  diário ANTES de enviar à bolsa.
+  Idempotência por clientOrderId.
+end note
+
+note right of UC08
+  <<availability>> timeout, retry controlado e
+  circuit breaker. Falha da bolsa não altera a carteira.
+end note
+
+note bottom of UC01
+  <<secureAuthentication>> senha com hash scrypt + salt,
+  código MFA de 6 dígitos (validade 2 min, 3 tentativas),
+  mensagem de erro genérica e bloqueio após 5 falhas.
+end note
+@enduml

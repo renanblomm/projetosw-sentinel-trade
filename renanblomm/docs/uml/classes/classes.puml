@@ -1,0 +1,202 @@
+@startuml classes
+title SentinelTrade — Diagrama de Classes de Projeto
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "Domínio" {
+  enum EstadoOrdem {
+    CRIADA
+    VALIDADA
+    ABERTA
+    EXECUTADA
+    REJEITADA
+    CANCELADA
+  }
+  enum Lado {
+    COMPRA
+    VENDA
+  }
+  enum TipoOrdem {
+    MERCADO
+    LIMITADA
+  }
+  class Ordem <<entity>> {
+    - id : str <<PK>>
+    - client_order_id : str <<chave de idempotência>>
+    - usuario : str <<FK usuarios>>
+    - ativo : str <<FK ativos>>
+    - lado : Lado
+    - tipo : TipoOrdem
+    - quantidade : int
+    - preco_limite : float
+    - estado : EstadoOrdem
+    - historico : list[dict]
+    + valor_estimado : float
+    + preco_execucao : float
+    + motivo : str
+    + {static} nova(usuario: str, dados: dict) : Ordem
+    + transicionar(novo: EstadoOrdem) : None
+    + finalizada() : bool
+    + para_dict() : dict
+  }
+  class Conta <<entity>> {
+    - usuario : str <<PK, FK usuarios>>
+    - saldo : float
+    - bloqueado : float
+    - limite_diario : float
+    - operado_hoje : float
+    - custodia : dict[str, list[int]]
+    + saldo_disponivel() : float
+    + custodia_livre(ativo: str) : int
+    + reservar(ordem: Ordem) : None
+    + liberar(ordem: Ordem) : None
+    + liquidar(ordem: Ordem, preco: float) : tuple
+    + definir_limite(valor: float) : None
+    + resumo() : dict
+  }
+  class ErroSentinel <<exception>> {
+    + status : int
+  }
+  class ErroValidacao <<400>>
+  class ErroAutenticacao <<401>>
+  class ErroAutorizacao <<403>>
+  class ErroRegraNegocio <<409>>
+  ErroSentinel <|-- ErroValidacao
+  ErroSentinel <|-- ErroAutenticacao
+  ErroSentinel <|-- ErroAutorizacao
+  ErroSentinel <|-- ErroRegraNegocio
+  Ordem --> EstadoOrdem
+  Ordem --> Lado
+  Ordem --> TipoOrdem
+}
+
+package "Serviços (regras de negócio)" {
+  abstract class RegraRisco <<Strategy>> {
+    + {abstract} avaliar(ctx: ContextoRisco) : str | None
+  }
+  class RegraMercadoAberto
+  class RegraCotacaoDisponivel
+  class RegraSaldo
+  class RegraCustodia
+  class RegraLimiteDiario
+  RegraRisco <|-- RegraMercadoAberto
+  RegraRisco <|-- RegraCotacaoDisponivel
+  RegraRisco <|-- RegraSaldo
+  RegraRisco <|-- RegraCustodia
+  RegraRisco <|-- RegraLimiteDiario
+
+  class ContextoRisco <<dataclass>> {
+    + ordem : Ordem
+    + conta : Conta
+    + cotacao : dict
+    + mercado_aberto : bool
+    + valor_estimado() : float
+  }
+  class ResultadoRisco <<dataclass>> {
+    + aprovada : bool
+    + motivo : str
+    + valor_estimado : float
+  }
+  class ValidadorRisco {
+    + regras : list[RegraRisco]
+    + validar(ordem, conta, cotacao, mercado_aberto) : ResultadoRisco
+  }
+  ValidadorRisco o-- "1..*" RegraRisco
+  ValidadorRisco ..> ContextoRisco
+  ValidadorRisco ..> ResultadoRisco
+
+  class OrderService {
+    + enviar(usuario: str, dados: dict) : dict
+    + cancelar(usuario: str, ordem_id: str) : Ordem
+    + aplicar_resposta_bolsa(ordem: Ordem, resposta: dict) : None
+    + evento_bolsa(ordem_id: str, resposta: dict) : Ordem
+    + listar(usuario: str) : list[Ordem]
+    - _transicionar(ordem, novo, responsavel) : None
+  }
+  class AuthService <<secureAuthentication>> {
+    - _desafios : dict
+    - _sessoes : dict
+    - _falhas : dict
+    + login(usuario: str, senha: str) : dict
+    + verificar_mfa(desafio_id: str, codigo: str) : dict
+    + validar_sessao(token: str) : dict | None
+    + logout(token: str) : None
+  }
+  class AuditLogger <<audit>> {
+    + registrar(tipo: str, usuario: str, dados: dict) : dict
+    + listar() : list[dict]
+    + verificar_integridade() : dict
+  }
+  class NotificationService {
+    + notificar(ordem: Ordem) : None
+    + listar(usuario: str) : list[dict]
+  }
+  OrderService --> ValidadorRisco
+  OrderService --> AuditLogger
+  OrderService --> NotificationService
+  OrderService ..> Ordem
+  OrderService ..> Conta
+  AuthService --> AuditLogger
+}
+
+package "Persistência" {
+  class BancoDados {
+    + con : sqlite3.Connection
+    - _lock : RLock
+    + transacao() : ContextManager
+    + consultar(sql: str, params: tuple) : list
+  }
+  abstract class Repositorio {
+    # db : BancoDados
+    + {abstract} obter(chave)
+  }
+  class OrdemRepositorio {
+    + obter(id: str) : Ordem
+    + por_client_order_id(usuario, coid) : Ordem
+    + salvar(ordem: Ordem) : None
+    + listar(usuario: str) : list[Ordem]
+  }
+  class ContaRepositorio {
+    + obter(usuario: str) : Conta
+    + salvar(conta: Conta) : None
+  }
+  class UsuarioRepositorio
+  class AtivoRepositorio {
+    + codigos_negociaveis() : set[str]
+  }
+  Repositorio <|-- OrdemRepositorio
+  Repositorio <|-- ContaRepositorio
+  Repositorio <|-- UsuarioRepositorio
+  Repositorio <|-- AtivoRepositorio
+  Repositorio --> BancoDados
+}
+
+package "Integrações externas" {
+  class CircuitBreaker {
+    + estado : str
+    - _falhas : int
+    - _limite : int
+    + executar(funcao) : Any
+  }
+  class GatewayBolsa <<availability>> {
+    + mercado_aberto() : bool
+    + enviar_ordem(ordem: Ordem) : dict
+    + cancelar_ordem(ordem: Ordem) : dict
+  }
+  class IngestaoCotacoes {
+    - _cache : dict
+    + iniciar() : None
+    + obter(ativo: str) : dict
+  }
+  GatewayBolsa *-- CircuitBreaker
+  IngestaoCotacoes *-- CircuitBreaker
+}
+
+OrderService --> OrdemRepositorio
+OrderService --> ContaRepositorio
+OrderService --> AtivoRepositorio
+OrderService --> GatewayBolsa
+OrderService --> IngestaoCotacoes
+AuthService --> UsuarioRepositorio
+AuditLogger --> BancoDados
+@enduml

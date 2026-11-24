@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SentinelTrade · Orion Capital</title>
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <header>
+    <div class="marca">Sentinel<span>Trade</span> <small>Orion Capital · ambiente simulado</small></div>
+    <div id="topo-usuario" class="oculto"><span id="nome-usuario"></span> <button id="btn-sair" class="sec">Sair</button></div>
+  </header>
+
+  <main>
+    <!-- Etapa 1: senha -->
+    <section id="tela-login" class="cartao estreito">
+      <h2>Entrar</h2>
+      <form id="form-login">
+        <label>Usuário <input name="usuario" autocomplete="username" required></label>
+        <label>Senha <input name="senha" type="password" autocomplete="current-password" required></label>
+        <button>Continuar</button>
+      </form>
+    </section>
+
+    <!-- Etapa 2: MFA -->
+    <section id="tela-mfa" class="cartao estreito oculto">
+      <h2>Verificação em duas etapas</h2>
+      <p class="dica">Digite o código de 6 dígitos enviado (simulado: aparece no terminal do servidor).</p>
+      <form id="form-mfa">
+        <label>Código MFA <input name="codigo" inputmode="numeric" maxlength="6" required></label>
+        <button>Verificar</button>
+      </form>
+    </section>
+
+    <!-- Painel do investidor -->
+    <section id="tela-investidor" class="oculto">
+      <div class="linha-cards">
+        <div class="kpi"><small>Saldo disponível</small><strong id="k-disp"></strong></div>
+        <div class="kpi"><small>Saldo bloqueado</small><strong id="k-bloq"></strong></div>
+        <div class="kpi"><small>Limite diário restante</small><strong id="k-lim"></strong></div>
+        <div class="kpi"><small>Mercado</small><strong id="k-merc"></strong></div>
+      </div>
+      <div class="grade">
+        <div class="cartao">
+          <h3>Nova ordem</h3>
+          <form id="form-ordem">
+            <label>Ativo <select name="ativo" id="sel-ativo"></select></label>
+            <div class="duas">
+              <label>Lado <select name="lado"><option>COMPRA</option><option>VENDA</option></select></label>
+              <label>Tipo <select name="tipo" id="sel-tipo"><option>MERCADO</option><option>LIMITADA</option></select></label>
+            </div>
+            <div class="duas">
+              <label>Quantidade <input name="quantidade" type="number" min="1" step="1" value="10" required></label>
+              <label>Preço limite <input name="precoLimite" type="number" step="0.01" disabled></label>
+            </div>
+            <label>ClientOrderId <input name="clientOrderId" id="inp-coid" readonly></label>
+            <div class="duas">
+              <button>Enviar ordem</button>
+              <button type="button" id="btn-reenviar" class="sec" title="Reenvia com o mesmo ClientOrderId">Reenviar mesma ordem</button>
+            </div>
+          </form>
+          <p id="msg-ordem" class="msg"></p>
+        </div>
+        <div class="cartao">
+          <h3>Cotações <small id="cot-hora"></small></h3>
+          <table><thead><tr><th>Ativo</th><th>Preço</th><th>Dia</th></tr></thead><tbody id="tb-cot"></tbody></table>
+          <h3>Minha carteira</h3>
+          <table><thead><tr><th>Ativo</th><th>Qtd</th><th>Bloqueada</th><th>Livre</th></tr></thead><tbody id="tb-cart"></tbody></table>
+        </div>
+      </div>
+      <div class="grade">
+        <div class="cartao largo">
+          <h3>Minhas ordens</h3>
+          <table><thead><tr><th>Hora</th><th>Ativo</th><th>Lado</th><th>Tipo</th><th>Qtd</th><th>Preço</th><th>Estado</th><th>Motivo</th><th></th></tr></thead><tbody id="tb-ordens"></tbody></table>
+        </div>
+        <div class="cartao">
+          <h3>Notificações</h3>
+          <ul id="lista-notif" class="notif"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Painel do operador de risco -->
+    <section id="tela-operador" class="oculto">
+      <div class="grade">
+        <div class="cartao">
+          <h3>Mercado simulado</h3>
+          <p>Estado: <strong id="op-merc"></strong></p>
+          <div class="duas"><button data-merc="ABERTO">Abrir mercado</button><button data-merc="FECHADO" class="sec">Fechar mercado</button></div>
+          <h3>Parametrizar limite diário</h3>
+          <form id="form-limite">
+            <label>Investidor <select name="usuario" id="sel-inv"></select></label>
+            <label>Novo limite (R$) <input name="limiteDiario" type="number" min="1" step="0.01" required></label>
+            <button>Salvar limite</button>
+          </form>
+          <p id="msg-limite" class="msg"></p>
+        </div>
+        <div class="cartao largo">
+          <h3>Investidores</h3>
+          <table><thead><tr><th>Investidor</th><th>Disponível</th><th>Operado hoje</th><th>Limite</th></tr></thead><tbody id="tb-inv"></tbody></table>
+          <h3>Fluxo de ordens (todas)</h3>
+          <table><thead><tr><th>Hora</th><th>Investidor</th><th>Ativo</th><th>Lado</th><th>Qtd</th><th>Estado</th><th>Risco (ms)</th></tr></thead><tbody id="tb-fluxo"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Auditoria (auditor e operador) -->
+    <section id="tela-auditoria" class="cartao oculto">
+      <h3>Trilha de auditoria <span id="aud-integ" class="selo"></span></h3>
+      <table><thead><tr><th>#</th><th>Timestamp (UTC)</th><th>Evento</th><th>Usuário</th><th>Dados</th><th>Hash</th></tr></thead><tbody id="tb-aud"></tbody></table>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
